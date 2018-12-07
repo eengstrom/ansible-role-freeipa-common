@@ -1,0 +1,57 @@
+---
+
+# Bug workaround on Ubuntu >= 16.x
+# - https://bugs.launchpad.net/ubuntu/+source/freeipa/+bug/1336869
+
+# Basicaly, we need to manually enable the pam mkhomdir config.
+# Helpful hints:
+# - https://bgstack15.wordpress.com/2017/06/26/enabling-mkhomedir-on-ubuntu-for-freeipa/
+# - https://bugs.launchpad.net/ubuntu/+source/pam/+bug/682662
+# - https://ubuntuforums.org/showthread.php?t=2278852
+
+# ------
+# "EASY" approach: Manually put entry in to /etc/pam.d/common-session
+# ------
+# - name: Fix for mkhomedir option on Ubuntu <= 16.x
+#   lineinfile:
+#     path: /etc/pam.d/common-session
+#     insertafter: '^session.*pam_sss.so'
+#     regex: '^session.*pam_mkhomedir.so.*'
+#     line: 'session	optional 	pam_mkhomedir.so skel=/etc/skel/'
+
+# ------
+# "BETTER" approach: use `debconf` and `pam-auth-update` so change
+# survives any future updates of related packages or calls to
+# `pam-auth-update`.
+# ------
+- name: Fix for pam && mkhomedir on Ubuntu <= 16.x
+  lineinfile:
+    path: /usr/share/pam-configs/mkhomedir
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items:
+    - { regexp: '^Default:',
+        line: 'Default: yes' }
+    - { regexp: '^#?\s+.*pam_mkhomedir.so.*',
+        line: '	required	pam_mkhomedir.so  umask=0022 skel=/etc/skel/ silent' }
+  register: freeipa_pam_mkhomedir
+
+- name: update debconf for libpam-runtime
+  debconf:
+    name: libpam-runtime
+    setting: 'libpam-runtime/profiles'
+    value: 'pwquality, unix, sss, mkhomedir'
+    vtype: multiselect
+  when: freeipa_pam_mkhomedir.changed
+
+- name: un-see `mkhomedir` for `pam-auth-update`
+  lineinfile:
+    path: /var/lib/pam/seen
+    regexp: '^mkhomedir'
+    state: absent
+  when: freeipa_pam_mkhomedir.changed
+
+- name: update pam configs
+  command: >
+    pam-auth-update --package
+  when: freeipa_pam_mkhomedir.changed

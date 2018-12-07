@@ -1,0 +1,21 @@
+---
+
+# Should we install and configure the rng-tools package?
+# Type: Bool
+freeipa_install_rngtools: true
+
+# What (HW) RNG device should we use?
+# While /dev/urandom is not ideal, it will exist and is non-blocking.
+# Ideal would be to use a true hardware RNG.
+# See: https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/security_guide/sect-security_guide-encryption-using_the_random_number_generator
+# Type: String
+freeipa_rngtools_dev: '/dev/urandom'
+
+# Do we expect to use the `--mkhomedir` option?
+# If so, we might need a patch for pam & mkhomedir on some systems.
+# Here, do our best to guess if `--mkhomedir` is set.
+# Type: Bool
+freeipa_fix_mkhomedir: ( '--mkhomedir' in
+                           "{{ freeipa_common_install_options | d([])
+                               + freeipa_server_install_options | d([])
+                               + freeipa_client_install_options | d([]) }}" )

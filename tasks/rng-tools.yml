@@ -1,0 +1,24 @@
+---
+
+- name: install rng-tools
+  package:
+    name: rng-tools
+    state: present
+  register: rngtools
+
+- name: configure rng-tools `HRNGDEVICE`
+  lineinfile:
+    path: /etc/default/rng-tools
+    insertafter: 'DEVICE=/dev/null'
+    regex: "HRNGDEVICE={{ freeipa_rngtools_dev }}"
+    line: 'HRNGDEVICE={{ freeipa_rngtools_dev }}'
+  when:
+    - ansible_distribution == "Ubuntu"
+  register: rngconfig
+
+- name: (re)start rng-tools
+  systemd:
+    name: rng-tools
+    enabled: true
+    state: restarted
+  when: rngtools.changed or rngconfig.changed
