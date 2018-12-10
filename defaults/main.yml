@@ -15,7 +15,6 @@ freeipa_rngtools_dev: '/dev/urandom'
 # If so, we might need a patch for pam & mkhomedir on some systems.
 # Here, do our best to guess if `--mkhomedir` is set.
 # Type: Bool
-freeipa_fix_mkhomedir: ( '--mkhomedir' in
-                           "{{ freeipa_common_install_options | d([])
-                               + freeipa_server_install_options | d([])
-                               + freeipa_client_install_options | d([]) }}" )
+freeipa_fix_mkhomedir: ( '--mkhomedir'
+                           in "{{ freeipa_server_install_options | d([])
+                                + freeipa_client_install_options | d([]) }}" )
