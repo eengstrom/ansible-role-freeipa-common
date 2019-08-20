@@ -1,13 +1,29 @@
 ---
 
+# - name: Gather OS specific variables
+#   include_vars: "{{ item }}"
+#   with_first_found:
+#     - files:
+#         - "{{ ansible_os_family }}-{{ ansible_distribution }}-{{ ansible_distribution_version }}.yml"
+#         - "{{ ansible_os_family }}-{{ ansible_distribution }}.yml"
+#         - "{{ ansible_os_family }}.yml"
+#       skip: true
+
+# Replace that with more verbose, but non-deprecated method for Ansible >= 2.8.
+# see also: https://github.com/ansible/ansible/issues/58942
 - name: Gather OS specific variables
-  include_vars: "{{ item }}"
-  with_first_found:
-    - files:
+  include_vars: "{{ osvars }}"
+  vars:
+    osvars_:
+      files:
         - "{{ ansible_os_family }}-{{ ansible_distribution }}-{{ ansible_distribution_version }}.yml"
         - "{{ ansible_os_family }}-{{ ansible_distribution }}.yml"
         - "{{ ansible_os_family }}.yml"
-      skip: true
+      paths:
+        - ../vars
+    osvars: "{{ lookup('first_found', osvars_, errors='ignore') }}"
+  when:
+    - (osvars | length > 0)
 
 - include_tasks: rng-tools.yml
   when:
